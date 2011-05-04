@@ -6,5 +6,5 @@ h2. Running the code
 
 * lein or cake deps
 * To run code
-** java -cp "lib/*":src clojure.main src/coloured_balls/core.clj
+** java -cp 'lib/*':src clojure.main src/coloured_balls/core.clj
 
