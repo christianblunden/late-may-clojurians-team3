@@ -29,15 +29,15 @@
    [:y]
    #(+ % (:vy ball))))
 
-
 (defn collide [ball]
   (let [bounce-positive (fn [key] (update-in ball [key] #(Math/abs %)))
-	bounce-negative (fn [key] (update-in ball [key] #(- (Math/abs %))))]     
+	bounce-negative (fn [key] (update-in ball [key] #(- (Math/abs %))))
+        radius (/ (:radius ball) 2)]     
     (cond
-     (< (:x ball) (/ (:radius ball) 2))  (bounce-positive :vx)
-     (< (- window-x (:x ball)) (/ (:radius ball) 2)) (bounce-negative :vx)
-     (< (:y ball) (/ (:radius ball) 2)) (bounce-positive :vy) 
-     (< (- window-y (:y ball)) (/ (:radius ball) 2)) (bounce-negative :vy)
+     (< (:x ball) radius)  (bounce-positive :vx)
+     (> (+ (:x ball) radius) window-x) (bounce-negative :vx)
+     (< (:y ball) radius) (bounce-positive :vy) 
+     (> (+ (:y ball) radius) window-y) (bounce-negative :vy)
      :otherwise ball)))
 
 (defn collides? [b1 b2]
