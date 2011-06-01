@@ -7,18 +7,23 @@
 ;; draw method every frame. Place your code here. If you eval it
 ;; interactively, you can redefine it while the applet is running and
 ;; see effects immediately
-(defstruct ball :x :y :vx :vy :red :blue :green :radius)
+(defstruct ball :x :y :vx :vy :red :blue :green :radius :label)
 (def window-x 1200)
 (def window-y 800)
 
 (defn draw-ball [ball]
 	(fill (:red ball) (:green ball) (:blue ball))
-	(ellipse (:x ball) (:y ball) (:radius ball) (:radius ball)))
+	(ellipse (:x ball) (:y ball) (:radius ball) (:radius ball))
+        (fill 0 0 0)
+        (text-align 1)
+        (string->text (:label ball) (:x ball) (:y ball) 100))
 
 (defn make-ball []
   (struct-map ball :x (rand-int window-x) :y (rand-int window-y)
 	      :vx (- (* 2 (rand-int 5)) 5) :vy (-  (* 2 (rand-int 5)) 5)
-	      :red (rand-int 256) :blue (rand-int 256) :green (rand-int 256) :radius (rand-int 70)))
+	      :red (rand-int 256) :blue (rand-int 256) :green (rand-int 256)
+              :radius (rand-int 70)
+              :label (rand-nth ["good" "evil"])))
 
 (def no-balls 100)
 (def ball-state (atom (take no-balls (repeatedly make-ball))))
@@ -29,7 +34,7 @@
    [:y]
    #(+ % (:vy ball))))
 
-(defn collide [ball]
+(defn bounce [ball]
   (let [bounce-positive (fn [key] (update-in ball [key] #(Math/abs %)))
 	bounce-negative (fn [key] (update-in ball [key] #(- (Math/abs %))))
         radius (/ (:radius ball) 2)]     
@@ -40,10 +45,13 @@
      (> (+ (:y ball) radius) window-y) (bounce-negative :vy)
      :otherwise ball)))
 
+(defn vlen [[x y]]
+  (Math/sqrt (+ (* x x) (* y y))))
+
 (defn collides? [b1 b2]
   (let [dx (- (:x b1) (:x b2))
 	dy (- (:y b1) (:y b2))]
-    (< (Math/sqrt (+ (* dx dx) (* dy dy)))
+    (< (vlen [dx dy])
        (/ (+ (:radius b1) (:radius b2)) 2))))
 
 (defn vortho [[x y]]
@@ -54,9 +62,6 @@
 
 (defn vsub [[u v] [x y]]
   [(- u x) (- v y)])
-
-(defn vlen [[x y]]
-  (Math/sqrt (+ (* x x) (* y y))))
 
 (defn vunit [[x y]]
   [(/ x (vlen [x y]))
@@ -80,22 +85,20 @@
     (assoc ball :radius (+ (:radius ball) 5))
   ))
 
-(defn mutual-collisions [balls]
-  (filter #(< 0 (:radius %) window-y)
-          (map
-   (fn [b]
-     (let [crash (some #(if (and (not= % b) (collides? % b)) % nil) balls)]
-       (if (not (nil? crash))
-	 (eat (reflect b crash) crash)
-	 b)))
-   balls)))
+(defn collisions [balls]
+  (map (fn [b]
+           (let [crash (some #(if (and (not= % b) (collides? % b)) % nil) balls)]
+             (if (not (nil? crash))
+               (eat (reflect b crash) crash)
+               b)))
+         balls))
 
-(defn draw
-  "Example usage of with-translation and with-rotation."
-  []
+(defn kill [balls]
+  (filter #(< 0 (:radius %) window-y) balls))
 
-  (swap! ball-state #(map (comp move collide) %))
-  (swap! ball-state mutual-collisions)
+(defn draw []
+  (swap! ball-state #(map (comp move bounce) %))
+  (swap! ball-state (comp collisions kill))
   
   (background 226)
   (doall
