@@ -8,17 +8,19 @@
 ;; interactively, you can redefine it while the applet is running and
 ;; see effects immediately
 (defstruct ball :x :y :vx :vy :red :blue :green :radius)
+(def window-x 1200)
+(def window-y 800)
 
 (defn draw-ball [ball]
 	(fill (:red ball) (:green ball) (:blue ball))
 	(ellipse (:x ball) (:y ball) (:radius ball) (:radius ball)))
 
 (defn make-ball []
-  (struct-map ball :x (rand-int 400) :y (rand-int 400)
+  (struct-map ball :x (rand-int window-x) :y (rand-int window-y)
 	      :vx (- (* 2 (rand-int 5)) 5) :vy (-  (* 2 (rand-int 5)) 5)
 	      :red (rand-int 256) :blue (rand-int 256) :green (rand-int 256) :radius (rand-int 70)))
 
-(def no-balls 10)
+(def no-balls 60)
 (def ball-state (atom (take no-balls (repeatedly make-ball))))
 
 (defn move [ball]
@@ -33,9 +35,9 @@
 	bounce-negative (fn [key] (update-in ball [key] #(- (Math/abs %))))]     
     (cond
      (< (:x ball) (/ (:radius ball) 2))  (bounce-positive :vx)
-     (< (- 400 (:x ball)) (/ (:radius ball) 2)) (bounce-negative :vx)
+     (< (- window-x (:x ball)) (/ (:radius ball) 2)) (bounce-negative :vx)
      (< (:y ball) (/ (:radius ball) 2)) (bounce-positive :vy) 
-     (< (- 400 (:y ball)) (/ (:radius ball) 2)) (bounce-negative :vy)
+     (< (- window-y (:y ball)) (/ (:radius ball) 2)) (bounce-negative :vy)
      :otherwise ball)))
 
 (defn collides? [b1 b2]
@@ -72,14 +74,20 @@
 	newpb (vmul (- (vlen move)) (vunit (vadd connector disp)))]
     (assoc ball :vx (first newpb) :vy (second newpb))))
 
+(defn eat [ball opposite]
+  (if (< (:radius ball) (:radius opposite))
+    (assoc ball :radius (- (:radius ball) 5))
+    (assoc ball :radius (+ (:radius ball) 5))
+  ))
+
 (defn mutual-collisions [balls]
-  (map
+  (remove #(> 0 (:radius %)) (map
    (fn [b]
      (let [crash (some #(if (and (not= % b) (collides? % b)) % nil) balls)]
        (if (not (nil? crash))
-	 (reflect b crash)
+	 (eat (reflect b crash) crash)
 	 b)))
-   balls))
+   balls)))
 
 (defn draw
   "Example usage of with-translation and with-rotation."
@@ -98,11 +106,11 @@
   (smooth)
   (no-stroke)
   (fill 226)
-  (framerate 20))
+  (framerate 60))
 
 ;; Now we just need to define an applet:
 
 (defapplet balls :title "Coloured balls"
-  :setup setup :draw draw :size [400 400])
+  :setup setup :draw draw :size [window-x window-y])
 
 (run balls)
