@@ -20,7 +20,7 @@
 	      :vx (- (* 2 (rand-int 5)) 5) :vy (-  (* 2 (rand-int 5)) 5)
 	      :red (rand-int 256) :blue (rand-int 256) :green (rand-int 256) :radius (rand-int 70)))
 
-(def no-balls 60)
+(def no-balls 100)
 (def ball-state (atom (take no-balls (repeatedly make-ball))))
 
 (defn move [ball]
@@ -81,7 +81,8 @@
   ))
 
 (defn mutual-collisions [balls]
-  (remove #(> 0 (:radius %)) (map
+  (filter #(< 0 (:radius %) window-y)
+          (map
    (fn [b]
      (let [crash (some #(if (and (not= % b) (collides? % b)) % nil) balls)]
        (if (not (nil? crash))
@@ -95,7 +96,6 @@
 
   (swap! ball-state #(map (comp move collide) %))
   (swap! ball-state mutual-collisions)
-  
   
   (background 226)
   (doall
